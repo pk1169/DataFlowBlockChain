@@ -80,7 +80,6 @@ func ReadTransaction(db DatabaseReader, hash common.Hash) (*types.Transaction, c
 
 // WriteVtLookupEntries store a positional metadata for every vote from a block,
 func WriteVtLookupEntries(db DatabaseWriter, block *types.Block) {
-	txs := block.Transactions()
 	for i, vt := range block.VoteCollection() {
 		entry := VtLookupEntry{
 			BlockHash:  block.Hash(),
@@ -92,8 +91,8 @@ func WriteVtLookupEntries(db DatabaseWriter, block *types.Block) {
 			log.Fatal("Failed to encode vt lookup entry", "err", err)
 		}
 		// @mode
-		fmt.Println(vtLookupKey(txs[vt.TxIndex.Uint64()].Hash(), vt.NodeID))
-		if err := db.Put(vtLookupKey(txs[vt.TxIndex.Uint64()].Hash(), vt.NodeID), data); err != nil {
+		fmt.Println(vtLookupKey(vt.TxHash, vt.NodeID))
+		if err := db.Put(vtLookupKey(vt.TxHash, vt.NodeID), data); err != nil {
 			log.Fatal("Failed to store vt lookup entry", "err", err)
 		}
 	}

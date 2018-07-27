@@ -124,7 +124,7 @@ func main() {
 			S:big.NewInt(2),
 
 			NodeID:"Apple",
-			TxIndex:big.NewInt(0),
+			TxHash:txs[0].Hash(),
 		},
 		&types.Vote{
 			V:big.NewInt(0),
@@ -132,7 +132,7 @@ func main() {
 			S:big.NewInt(4),
 
 			NodeID:"IBM",
-			TxIndex:big.NewInt(1),
+			TxHash:txs[1].Hash(),
 		},
 	}
 	//txshash := types.DeriveSha(txs)

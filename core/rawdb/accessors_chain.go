@@ -253,32 +253,6 @@ func ReadTd(db DatabaseReader, hash common.Hash, number uint64) *big.Int {
 	return td
 }
 
-// WriteTd stores the total difficulty of a block into the database.
-func WriteTd(db DatabaseWriter, hash common.Hash, number uint64, td *big.Int) {
-	data, err := rlp.EncodeToBytes(td)
-	if err != nil {
-		log.Fatal("Failed to RLP encode block total difficulty", "err", err)
-	}
-	if err := db.Put(headerTDKey(number, hash), data); err != nil {
-		log.Fatal("Failed to store block total difficulty", "err", err)
-	}
-}
-
-// DeleteTd removes all block total difficulty data associated with a hash.
-func DeleteTd(db DatabaseDeleter, hash common.Hash, number uint64) {
-	if err := db.Delete(headerTDKey(number, hash)); err != nil {
-		log.Fatal("Failed to delete block total difficulty", "err", err)
-	}
-}
-
-
-
-// DeleteReceipts removes all receipt data associated with a block hash.
-func DeleteReceipts(db DatabaseDeleter, hash common.Hash, number uint64) {
-	if err := db.Delete(blockReceiptsKey(number, hash)); err != nil {
-		log.Fatal("Failed to delete block receipts", "err", err)
-	}
-}
 
 // ReadBlock retrieves an entire block corresponding to the hash, assembling it
 // back from the stored header and body. If either the header or body could not

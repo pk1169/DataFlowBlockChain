@@ -27,9 +27,10 @@ type Header struct {
 	Number *big.Int 		`json:"number" gencodec:"required"`
 
 	// Signature values of the node who generates the block
-	V *big.Int 				`json:"v" gencodec:"required"`
-	R *big.Int 				`json:"r" gencodec:"required"`
-	S *big.Int 				`json:"s" gencodec:"required"`
+	V *big.Int 				`json:"v" 		gencodec:"required"`
+	R *big.Int 				`json:"r" 		gencodec:"required"`
+	S *big.Int 				`json:"s" 		gencodec:"required"`
+	PubKey []byte			`json:"pubKey"	gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -164,16 +165,6 @@ type Body struct {
 	Votes			VoteCollection
 }
 
-type Vote struct {
-	TxIndex		*big.Int
-	IsExist		*big.Int
-	NodeID		string
-	Func		common.Hash
-
-	V 			*big.Int
-	R 			*big.Int
-	S    		*big.Int
-}
 
 // NewBlockWithHeader creates a block with the given header data. The
 // header data is copied, changes to header and to the field values
@@ -214,4 +205,4 @@ func (b *Block) Body() *Body { return &Body{b.transactions, b.votes} }
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 func (b *Block) Number() *big.Int     { return new(big.Int).Set(b.header.Number) }
 func (b *Block) NumberU64() uint64        { return b.header.Number.Uint64() }
-func (b *Vote) NumberU64()	uint64 {return b.TxIndex.Uint64()}
+//func (b *Vote) NumberU64()	uint64 {return b.TxIndex.Uint64()}

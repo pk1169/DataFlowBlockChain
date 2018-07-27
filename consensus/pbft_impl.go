@@ -11,13 +11,13 @@ type State struct {
 	ViewID         int64 	// 视图编号
 	MsgLogs        *MsgLogs // 消息日志
 	LastSequenceID int64	//
-	CurrentStage   Stage
+	CurrentStage   Stage	// 当前状态
 }
 
 type MsgLogs struct {
-	ReqMsg        *RequestMsg
-	PrepareMsgs   map[string]*VoteMsg
-	CommitMsgs    map[string]*VoteMsg
+	ReqMsg        *RequestMsg 			// 请求
+	PrepareMsgs   map[string]*VoteMsg 	// 准备
+	CommitMsgs    map[string]*VoteMsg	// 提交
 }
 
 type Stage int
