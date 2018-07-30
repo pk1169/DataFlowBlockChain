@@ -6,11 +6,13 @@ import (
 	"DataFlowBlockChain/rlp"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common"
+	"sync/atomic"
 )
 
-//go:generate gencodec -type Transaction -field-override TransactionMarshaling -out gen_tx_json.go
+
+//go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
 // 交易是流量数据信息的载体
-type Transaction struct {
+type txdata struct {
 	// Signature values
 	V *big.Int	`json:"v"	gencodec:"required"`
 	R *big.Int	`json:"r"	gencodec:"required"`
@@ -26,10 +28,10 @@ type Transaction struct {
 	LastTime *big.Int	`json:"lastTime"	gencodec:"required"`
 	Size *big.Int		`json:"size"		gencodec:"required"` // 流量大小
 
-
+	PubKey 		[]byte	`json:"pubKey"		gencodec:"required"`
 }
 
-type TransactionMarshaling struct {
+type txdataMarshaling struct {
 	StartTime       *hexutil.Big
 	LastTime		*hexutil.Big
 	Size   			*hexutil.Big
@@ -40,6 +42,14 @@ type TransactionMarshaling struct {
 	Hash common.Hash `json:"hash"`
 }
 
+type Transaction struct {
+	data txdata
+	// caches
+	hash atomic.Value
+	size atomic.Value
+	from atomic.Value
+}
+
 func (t *Transaction) Hash() common.Hash {
 	return rlpHash(t)
 }
@@ -48,15 +58,27 @@ func (t *Transaction) Hash() common.Hash {
 // HashNoNonce returns the hash which is used as input for the proof-of-work search.
 func (t *Transaction) HashNoSig() common.Hash {
 	return rlpHash([]interface{}{
-		t.SrcAddress,
-		t.DestAddress,
-		t.SrcPort,
-		t.DestPort,
-		t.Protocol,
-		t.StartTime,
-		t.LastTime,
+		t.data.SrcAddress,
+		t.data.DestAddress,
+		t.data.SrcPort,
+		t.data.DestPort,
+		t.data.Protocol,
+		t.data.StartTime,
+		t.data.LastTime,
 		t.Size,
 	})
+}
+
+// Size returns the true RLP encoded storage size of the transaction, either by
+// encoding and returning it, or returning a previsouly cached value.
+func (tx *Transaction) Size() common.StorageSize {
+	if size := tx.size.Load(); size != nil {
+		return size.(common.StorageSize)
+	}
+	c := writeCounter(0)
+	rlp.Encode(&c, &tx.data)
+	tx.size.Store(common.StorageSize(c))
+	return common.StorageSize(c)
 }
 
 // DataInformation is the information of dataflow

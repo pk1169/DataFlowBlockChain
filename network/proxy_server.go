@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"bytes"
+	"time"
 )
 
 type Server struct {
@@ -27,6 +28,16 @@ func (server *Server) Start() {
 	if err := http.ListenAndServe(server.url, nil); err != nil {
 		fmt.Println(err)
 		return
+	}
+
+	if server.node.NodeID == "Apple" {
+		ticker:=time.NewTicker(time.Second*5)
+
+		for _=range ticker.C {
+
+		}
+
+		time.Sleep(time.Minute)
 	}
 }
 

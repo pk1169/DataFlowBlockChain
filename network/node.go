@@ -93,7 +93,7 @@ func (node *Node) Broadcast(msg interface{}, path string) map[string]error {
 			continue
 		}
 
-		send(url + path, jsonMsg)
+		send(url + path, jsonMsg) // path是用来发送给不同处理方法，如："/prepare"
 	}
 
 	if len(errorMap) == 0 {

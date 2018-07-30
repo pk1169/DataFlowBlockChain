@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"io"
 )
 
 var (
@@ -64,6 +65,13 @@ func (h *Header) HashNoSig() common.Hash {
 		h.Time,
 		h.Number,
 	})
+}
+
+type writeCounter common.StorageSize
+
+func (c *writeCounter) Write(b []byte) (int, error) {
+	*c += writeCounter(len(b))
+	return len(b), nil
 }
 
 
@@ -184,6 +192,11 @@ func (b *Block) Hash() common.Hash {
 	return v
 }
 
+// ParentHash returns the parentHash of this block
+func (b *Block) ParentHash() common.Hash {
+	return b.header.ParentHash
+}
+
 // WithBody returns a new block with the given transaction and uncle contents.
 func (b *Block) WithBody(transactions []*Transaction, votes VoteCollection) *Block {
 	block := &Block{
@@ -197,6 +210,24 @@ func (b *Block) WithBody(transactions []*Transaction, votes VoteCollection) *Blo
 	}
 
 	return block
+}
+
+
+// "external" block encoding. used for eth protocol, etc.
+type extblock struct {
+	Header *Header
+	Txs    []*Transaction
+	Votes VoteCollection
+}
+
+
+// EncodeRLP serializes b into the Ethereum RLP block format.
+func (b *Block) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, extblock{
+		Header: b.header,
+		Txs:    b.transactions,
+		Votes: b.votes,
+	})
 }
 
 // Body returns the non-header content of the block.
