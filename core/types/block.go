@@ -11,6 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"io"
+	"fmt"
+	"crypto/ecdsa"
+	"log"
 )
 
 var (
@@ -65,6 +68,32 @@ func (h *Header) HashNoSig() common.Hash {
 		h.Time,
 		h.Number,
 	})
+}
+
+// WithSignature returns a new Header with the given signature.
+// This signature needs to be formatted).
+func (header *Header) WithSignature(sig []byte) (*Header, error) {
+	if len(sig) != 65 {
+		panic(fmt.Sprint("wrong size for signature: got %d, want 65", len(sig)))
+	}
+	r := new(big.Int).SetBytes(sig[:32])
+	s := new(big.Int).SetBytes(sig[32:64])
+	v := new(big.Int).SetBytes([]byte{sig[64]})
+	cpy := CopyHeader(header)
+	cpy.R, cpy.S, cpy.V = r, s, v
+	return cpy, nil
+}
+
+// func Sign reutruns a new signed header from nosig header
+func (header *Header) Sign(privKey *ecdsa.PrivateKey) (*Header, error) {
+	hash := header.HashNoSig()
+	sig, err := crypto.Sign(hash[:], privKey)
+
+	if err != nil {
+		log.Fatal("sig error", "error", err)
+	}
+
+	return header.WithSignature(sig)
 }
 
 type writeCounter common.StorageSize

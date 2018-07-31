@@ -10,11 +10,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-var _ = (*TransactionMarshaling)(nil)
+var _ = (*txdataMarshaling)(nil)
 
 // MarshalJSON marshals as JSON.
-func (t Transaction) MarshalJSON() ([]byte, error) {
-	type Transaction struct {
+func (t txdata) MarshalJSON() ([]byte, error) {
+	type txdata struct {
 		V           *hexutil.Big `json:"v"	gencodec:"required"`
 		R           *hexutil.Big `json:"r"	gencodec:"required"`
 		S           *hexutil.Big `json:"s"	gencodec:"required"`
@@ -26,9 +26,10 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 		StartTime   *hexutil.Big `json:"startTime"	gencodec:"required"`
 		LastTime    *hexutil.Big `json:"lastTime"	gencodec:"required"`
 		Size        *hexutil.Big `json:"size"		gencodec:"required"`
-		Hash        common.Hash  `json:"hash"`
+		PubKey      []byte       `json:"pubKey"		gencodec:"required"`
+		Hash        *common.Hash `json:"hash" rlp:"-"`
 	}
-	var enc Transaction
+	var enc txdata
 	enc.V = (*hexutil.Big)(t.V)
 	enc.R = (*hexutil.Big)(t.R)
 	enc.S = (*hexutil.Big)(t.S)
@@ -40,13 +41,14 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	enc.StartTime = (*hexutil.Big)(t.StartTime)
 	enc.LastTime = (*hexutil.Big)(t.LastTime)
 	enc.Size = (*hexutil.Big)(t.Size)
-	enc.Hash = t.Hash()
+	enc.PubKey = t.PubKey
+	enc.Hash = t.Hash
 	return json.Marshal(&enc)
 }
 
 // UnmarshalJSON unmarshals from JSON.
-func (t *Transaction) UnmarshalJSON(input []byte) error {
-	type Transaction struct {
+func (t *txdata) UnmarshalJSON(input []byte) error {
+	type txdata struct {
 		V           *hexutil.Big `json:"v"	gencodec:"required"`
 		R           *hexutil.Big `json:"r"	gencodec:"required"`
 		S           *hexutil.Big `json:"s"	gencodec:"required"`
@@ -58,8 +60,10 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 		StartTime   *hexutil.Big `json:"startTime"	gencodec:"required"`
 		LastTime    *hexutil.Big `json:"lastTime"	gencodec:"required"`
 		Size        *hexutil.Big `json:"size"		gencodec:"required"`
+		PubKey      []byte       `json:"pubKey"		gencodec:"required"`
+		Hash        *common.Hash `json:"hash" rlp:"-"`
 	}
-	var dec Transaction
+	var dec txdata
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
@@ -95,6 +99,12 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 	}
 	if dec.Size != nil {
 		t.Size = (*big.Int)(dec.Size)
+	}
+	if dec.PubKey != nil {
+		t.PubKey = dec.PubKey
+	}
+	if dec.Hash != nil {
+		t.Hash = dec.Hash
 	}
 	return nil
 }

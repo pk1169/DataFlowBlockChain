@@ -6,7 +6,16 @@ import (
 	"sync/atomic"
 	"github.com/ethereum/go-ethereum/common"
 	"DataFlowBlockChain/core/rawdb"
+	"github.com/hashicorp/golang-lru"
+	"errors"
 )
+
+const (
+	headerCacheLimit = 512
+	numberCacheLimit = 2048
+)
+
+var ErrNoGenesis = errors.New("Genesis not exist")
 
 // HeaderChain implements the basic block header chain logic that is shared by core.BlockChain
 type HeaderChain struct {
@@ -16,13 +25,74 @@ type HeaderChain struct {
 	currentHeader	atomic.Value	// Current head of the header chain
 	currentHeaderHash common.Hash 	// Hash of the current head of the header chain (prevent recomputing all the time)
 
+	headerCache 	*lru.Cache // cache for the most recent blocks
+	numberCache 	*lru.Cache // cache for the most recent block numbers
+
+
 }
 
 func NewHeaderChain(chainDb ethdb.Database) (*HeaderChain, error) {
-	hc := new(HeaderChain)
+	headerCache, _ := lru.New(headerCacheLimit)
+	numberCache, _ := lru.New(numberCacheLimit)
 
-	hc.chainDb = chainDb
+	hc := &HeaderChain{
+		chainDb: chainDb,
+		headerCache: headerCache,
+		numberCache: numberCache,
+	}
 	hc.genesisHeader = hc.GetHeaderByNumber(0)
+	if hc.genesisHeader == nil {
+		return nil, ErrNoGenesis
+	}
+	hc.currentHeader.Store(hc.genesisHeader)
+
+	if head := rawdb.ReadHeadBlockHash(chainDb); head != (common.Hash{}) {
+		if chead := hc.GetHeaderByHash(head); chead != nil {
+			hc.currentHeader.Store(chead)
+		}
+	}
+
+	hc.currentHeaderHash = hc.CurrentHeader().Hash()
+
+	return hc, nil
+}
+
+// GetBlockNumber retrieves the block number belonging to the given hash
+// from the cache or database
+func (hc *HeaderChain) GetBlockNumber(hash common.Hash) *uint64 {
+	if cached, ok := hc.numberCache.Get(hash); ok {
+		number := cached.(uint64)
+		return &number
+	}
+	number := rawdb.ReadHeaderNumber(hc.chainDb, hash)
+	if number != nil {
+		hc.numberCache.Add(hash, *number)
+	}
+	return number
+}
+
+
+// GetBlockHashesFromHash retrieves a number of block hashes starting at a given
+// hash, fetching towards the genesis block.
+func (hc *HeaderChain) GetBlockHashesFromHash(hash common.Hash, max uint64) []common.Hash {
+	// Get the origin header from which to fetch
+	header := hc.GetHeaderByHash(hash)
+	if header == nil {
+		return nil
+	}
+	// Iterate the headers until enough is collected or the genesis reached
+	chain := make([]common.Hash, 0, max)
+	for i := uint64(0); i < max; i++ {
+		next := header.ParentHash
+		if header = hc.GetHeader(next, header.Number.Uint64()-1); header == nil {
+			break
+		}
+		chain = append(chain, next)
+		if header.Number.Sign() == 0 {
+			break
+		}
+	}
+	return chain
 }
 
 // GetAncestor retrieves the Nth ancestor of a given block. It assumes that either the given block or
@@ -66,6 +136,11 @@ func (hc *HeaderChain) GetAncestor(hash common.Hash, number, ancestor uint64, ma
 // caching it if found.
 func (hc *HeaderChain) GetHeader(hash common.Hash, number uint64) *types.Header {
 
+	// Short circuit if the header's already in the cache, retrieve otherwise
+	if header, ok := hc.headerCache.Get(hash); ok {
+		return header.(*types.Header)
+	}
+
 	header := rawdb.ReadHeader(hc.chainDb, hash, number)
 	if header == nil {
 		return nil
@@ -85,41 +160,14 @@ func (hc *HeaderChain) GetHeaderByHash(hash common.Hash) *types.Header {
 }
 
 
-// GetBlockHashesFromHash retrieves a number of block hashes starting at a given
-// hash, fetching towards the genesis block.
-func (hc *HeaderChain) GetBlockHashesFromHash(hash common.Hash, max uint64) []common.Hash {
-	// Get the origin header from which to fetch
-	header := hc.GetHeaderByHash(hash)
-	if header == nil {
-		return nil
-	}
-	// Iterate the headers until enough is collected or the genesis reached
-	chain := make([]common.Hash, 0, max)
-	for i := uint64(0); i < max; i++ {
-		next := header.ParentHash
-		if header = hc.GetHeader(next, header.Number.Uint64()-1); header == nil {
-			break
-		}
-		chain = append(chain, next)
-		if header.Number.Sign() == 0 {
-			break
-		}
-	}
-	return chain
-}
 
-// GetBlockNumber retrieves the block number belonging to the given hash
-// from the cache or database
-func (hc *HeaderChain) GetBlockNumber(hash common.Hash) *uint64 {
 
-	number := rawdb.ReadHeaderNumber(hc.chainDb, hash)
-
-	return number
-}
 
 // HasHeader checks if a block header is present in the database or not.
 func (hc *HeaderChain) HasHeader(hash common.Hash, number uint64) bool {
-
+	if hc.numberCache.Contains(hash) || hc.headerCache.Contains(hash) {
+		return true
+	}
 	return rawdb.HasHeader(hc.chainDb, hash, number)
 }
 
@@ -176,6 +224,9 @@ func (hc *HeaderChain) SetHead(head uint64, delFn DeleteCallback) {
 	}
 	batch.Write()
 
+	// Clear out any stale content from the caches
+	hc.headerCache.Purge()
+	hc.numberCache.Purge()
 
 	if hc.CurrentHeader() == nil {
 		hc.currentHeader.Store(hc.genesisHeader)

@@ -18,13 +18,7 @@ import (
 const (
 	bodyCacheLimit      = 256
 	blockCacheLimit     = 256
-	maxFutureBlocks     = 256
-	maxTimeFutureBlocks = 30
-	badBlockLimit       = 10
-	triesInMemory       = 128
 
-	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
-	BlockChainVersion = 3
 )
 
 type BlockChain struct {
