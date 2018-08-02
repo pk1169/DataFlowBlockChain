@@ -21,7 +21,6 @@ import (
 	"DataFlowBlockChain/core/types"
 	"log"
 	"github.com/ethereum/go-ethereum/rlp"
-	"fmt"
 )
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction
@@ -91,7 +90,7 @@ func WriteVtLookupEntries(db DatabaseWriter, block *types.Block) {
 			log.Fatal("Failed to encode vt lookup entry", "err", err)
 		}
 		// @mode
-		fmt.Println(vtLookupKey(vt.TxHash, vt.NodeID))
+		//fmt.Println(vtLookupKey(vt.TxHash, vt.NodeID))
 		if err := db.Put(vtLookupKey(vt.TxHash, vt.NodeID), data); err != nil {
 			log.Fatal("Failed to store vt lookup entry", "err", err)
 		}
@@ -102,7 +101,7 @@ func WriteVtLookupEntries(db DatabaseWriter, block *types.Block) {
 // hash to allow retrieving the vote by hash.
 func ReadVtLookupEntry(db DatabaseReader, hash common.Hash, nodeID string) (common.Hash, uint64, uint64) {
 	// @mode
-	fmt.Println(vtLookupKey(hash, nodeID))
+	//fmt.Println(vtLookupKey(hash, nodeID))
 	data, _ := db.Get(vtLookupKey(hash, nodeID))
 	if len(data) == 0 {
 		return common.Hash{}, 0, 0

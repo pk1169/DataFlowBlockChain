@@ -55,13 +55,14 @@ type Transaction struct {
 	from atomic.Value
 }
 
-func NewTransaction(srcAddress string, srcPort, destPort, protocol, startTime, lastTime, size *big.Int, pubKey []byte) *Transaction {
-	return newTransaction(srcAddress , srcPort, destPort, protocol, startTime, lastTime, size, pubKey)
+func NewTransaction(srcAddress, destAddress string, srcPort, destPort, protocol, startTime, lastTime, size *big.Int, pubKey []byte) *Transaction {
+	return newTransaction(srcAddress ,destAddress, srcPort, destPort, protocol, startTime, lastTime, size, pubKey)
 }
 
-func newTransaction(srcAddress string, srcPort, destPort, protocol, startTime, lastTime, size *big.Int, pubKey []byte) *Transaction {
+func newTransaction(srcAddress, destAddress string, srcPort, destPort, protocol, startTime, lastTime, size *big.Int, pubKey []byte) *Transaction {
 	d := txdata{
 		SrcAddress:  srcAddress,
+		DestAddress: destAddress,
 		SrcPort:     new(big.Int),
 		DestPort:    new(big.Int),
 		Protocol:    new(big.Int),

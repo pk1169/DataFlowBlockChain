@@ -9,30 +9,32 @@ import (
 )
 
 type Node struct {
-	NodeID        string
+	NodeID        string  // 节点ID
 	NodeTable     map[string]string // key=nodeID, value=url
-	View          *View
-	CurrentState  *consensus.State
+	View          *View // 视图
+	CurrentState  *consensus.State // 节点当前状态
 	CommittedMsgs []*consensus.RequestMsg // kinda block.
-	MsgBuffer     *MsgBuffer
-	MsgEntrance   chan interface{}
-	MsgDelivery   chan interface{}
+	MsgBuffer     *MsgBuffer  // 消息缓冲，包括请求消息，预准备消息，准备消息，提交消息
+	MsgEntrance   chan interface{} // 消息入口
+	MsgDelivery   chan interface{} // 消息发送
 	Alarm         chan bool
 }
 
 type MsgBuffer struct {
-	ReqMsgs        []*consensus.RequestMsg
-	PrePrepareMsgs []*consensus.PrePrepareMsg
-	PrepareMsgs    []*consensus.VoteMsg
-	CommitMsgs     []*consensus.VoteMsg
+	ReqMsgs        []*consensus.RequestMsg //
+	PrePrepareMsgs []*consensus.PrePrepareMsg  //
+	PrepareMsgs    []*consensus.VoteMsg //
+	CommitMsgs     []*consensus.VoteMsg //
 }
 
+// 视图，是当前投票环节的上下文
 type View struct {
-	ID      int64
-	Primary string
+	ID      int64   // 视图ID
+	Primary string  // 主节点ID
 }
 
-const ResolvingTimeDuration = time.Millisecond * 1000 // 1 second.
+// 处理的时间间隔
+const ResolvingTimeDuration = time.Millisecond * 100 // 1 second.
 
 func NewNode(nodeID string) *Node {
 	const viewID = 10000000000 // temporary.
@@ -495,6 +497,7 @@ func (node *Node) resolvePrepareMsg(msgs []*consensus.VoteMsg) []error {
 
 	return nil
 }
+
 
 func (node *Node) resolveCommitMsg(msgs []*consensus.VoteMsg) []error {
 	errs := make([]error, 0)

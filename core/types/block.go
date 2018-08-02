@@ -231,7 +231,7 @@ func (b *Block) WithBody(transactions []*Transaction, votes VoteCollection) *Blo
 	block := &Block{
 		header:       CopyHeader(b.header),
 		transactions: make([]*Transaction, len(transactions)),
-		votes:       make(VoteCollection, len(VoteCollection{})),
+		votes:       make(VoteCollection, len(votes)),
 	}
 	copy(block.transactions, transactions)
 	for k := range votes {

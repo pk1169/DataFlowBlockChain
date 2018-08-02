@@ -35,6 +35,16 @@ type VoteMarshaling struct {
 }
 
 
+func NewVote(txHash common.Hash, isExist *big.Int, nodeID string, funcHash common.Hash, pubKey []byte) *Vote {
+	return &Vote{
+		TxHash: txHash,
+		IsExist: isExist,
+		NodeID: nodeID,
+		Func: funcHash,
+		PubKey: pubKey,
+	}
+}
+
 // WithSignature returns a new Header with the given signature.
 // This signature needs to be formatted).
 func (vote *Vote) WithSignature(sig []byte) (*Vote, error) {

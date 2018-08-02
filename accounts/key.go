@@ -12,7 +12,7 @@ import (
 	"io/ioutil"
 )
 
-type PubKey []byte
+type PubKey [33]byte
 
 type Key struct {
 	Id 	uuid.UUID
@@ -37,7 +37,7 @@ func (k *Key) MarshalJSON() (j []byte, err error) {
 	return j, err
 }
 
-func (k *Key) UnMarshalJSON(j []byte) (err error) {
+func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	keyJSON := new(plainKeyJSON)
 	err = json.Unmarshal(j, &keyJSON)
 	if err != nil {
@@ -57,17 +57,23 @@ func (k *Key) UnMarshalJSON(j []byte) (err error) {
 		return err
 	}
 
-	k.PubKey = pubKey
+	k.PubKey = ByteToPubKey(pubKey)
 	k.PrivateKey = privKey
 
 	return nil
+}
+
+func ByteToPubKey(bytes []byte) PubKey {
+	var pubKey PubKey
+	_ = append(pubKey[:0], bytes...)
+	return pubKey
 }
 
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	id := uuid.NewRandom()
 	key := &Key{
 		Id:         id,
-		PubKey:    crypto.CompressPubkey(&privateKeyECDSA.PublicKey),
+		PubKey:    ByteToPubKey(crypto.CompressPubkey(&privateKeyECDSA.PublicKey)),
 		PrivateKey: privateKeyECDSA,
 	}
 	return key

@@ -8,7 +8,7 @@ import (
 	"errors"
 	"sync"
 	"github.com/hashicorp/golang-lru"
-	"DataFlowBlockChain/log"
+	"log"
 	"sync/atomic"
 	"fmt"
 	"io"
@@ -69,7 +69,7 @@ func NewBlockChain(db ethdb.Database) (*BlockChain, error) {
 // SetHead rewinds the local chain to a new head.
 
 func (bc *BlockChain) SetHead(head uint64) error {
-	log.Warn("Rewinding blockchain", "target", head)
+	log.Fatal("Rewinding blockchain", "target", head)
 
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
@@ -168,7 +168,7 @@ func (bc *BlockChain) ExportN(w io.Writer, first uint64, last uint64) error {
 	if first > last {
 		return fmt.Errorf("export failed: first (%d) is greater than last (%d)", first, last)
 	}
-	log.Info("Exporting batch of blocks", "count", last-first+1)
+	log.Fatal("Exporting batch of blocks", "count", last-first+1)
 
 	for nr := first; nr <= last; nr++ {
 		block := bc.GetBlockByNumber(nr)
@@ -205,6 +205,25 @@ func (bc *BlockChain) insert(block *types.Block) {
 		bc.hc.SetCurrentHeader(block.Header())
 		rawdb.WriteHeadFastBlockHash(bc.db, block.Hash())
 	}
+}
+
+func (bc *BlockChain) InsertBlock(block *types.Block) {
+	if rawdb.HasHeader(bc.db, block.Hash(), block.Header().Number.Uint64()) {
+		log.Fatal("block exist", "blockExist")
+		return
+	}
+	rawdb.WriteBlock(bc.db, block)
+	rawdb.WriteCanonicalHash(bc.db, block.Hash(), block.NumberU64())
+	rawdb.WriteTxLookupEntries(bc.db, block)
+	rawdb.WriteVtLookupEntries(bc.db, block)
+
+	if block.Header().ParentHash == rawdb.ReadHeadBlockHash(bc.db) {
+		bc.hc.SetCurrentHeader(block.Header())
+		bc.currentBlock.Store(block)
+		rawdb.WriteHeadHeaderHash(bc.db, block.Hash())
+		rawdb.WriteHeadBlockHash(bc.db, block.Hash())
+	}
+
 }
 
 // Genesis retrieves the chain's genesis block.
