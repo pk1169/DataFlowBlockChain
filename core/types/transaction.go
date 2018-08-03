@@ -99,8 +99,13 @@ func newTransaction(srcAddress, destAddress string, srcPort, destPort, protocol,
 	return &Transaction{data: d}
 }
 
-func (t *Transaction) Hash() common.Hash {
-	return rlpHash(t)
+func (tx *Transaction) Hash() common.Hash {
+	if hash := tx.hash.Load(); hash != nil {
+		return hash.(common.Hash)
+	}
+	v := rlpHash(tx)
+	tx.hash.Store(v)
+	return v
 }
 
 

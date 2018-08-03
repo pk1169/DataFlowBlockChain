@@ -25,4 +25,4 @@ const (
 const f = 1
 
 // la
-func CreateState(viewID int64, lastSequenceID  int64)
+// func CreateState(viewID int64, lastSequenceID  int64)

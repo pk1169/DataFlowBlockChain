@@ -3,22 +3,94 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"DataFlowBlockChain/core/types"
+	"sync"
 )
 
 type TxPool struct {
-	PendingTx	map[common.Hash]*types.Transaction
-	CommonTx 	map[common.Hash]*types.Transaction
-	VotedTx		map[common.Hash]*types.Transaction
+	PendingTxs	map[common.Hash]*types.Transaction // txs received from network
+	QueuedTxs	map[common.Hash]*types.Transaction // txs used to generate bloom
+	CommonTxs 	map[common.Hash]*types.Transaction // txs filtered by bloom
+	VotedTxs	map[common.Hash]*types.Transaction // txs voted by nodes
+	Bloom  		types.Bloom
 
-	CommonBloomCh  chan<- *
+
+	CommonBloomCh  chan types.Bloom
+	QueuedEvent	 chan struct{}  // inform the txpool to queue txs from pendingTxs
+	FindCommonEvent  chan struct{} // inform the txpool to find common txs
 }
 
+// func
 func (txp *TxPool) AddPendingTx(transaction *types.Transaction) {
-	txp.PendingTx[transaction.Hash()] = transaction
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+	txp.PendingTxs[transaction.Hash()] = transaction
 }
 
-func (txp *TxPool) RemovePendingTx(transaction *types.Transaction) {
-	delete(txp.PendingTx, transaction.Hash())
+func (txp *TxPool) RemovePendingTx(txHash common.Hash) {
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+	delete(txp.PendingTxs, txHash)
 }
 
-func (txp *TxPool) AddCo
+//
+func (txp *TxPool) GenerateQueuedTxs() {
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+	for k, v := range txp.PendingTxs {
+		txp.QueuedTxs[k] = v
+	}
+	txp.PendingTxs = make(map[common.Hash] *types.Transaction)
+}
+
+func (txp *TxPool) AddingQueuedTx(hash common.Hash, transaction *types.Transaction) {
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+	txp.QueuedTxs[hash] = transaction
+}
+
+func (txp *TxPool) RemoveQueuedTx(hash common.Hash) {
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+	delete(txp.QueuedTxs, hash)
+}
+
+func (txp *TxPool) FindCommonTxs(commonBloom types.Bloom) {
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+	for hash, tx := range txp.QueuedTxs {
+		isCommon := types.BloomLookup(commonBloom, hash)
+		if isCommon {
+			txp.CommonTxs[hash] = tx
+		}
+	}
+}
+
+
+
+func (txp *TxPool) RemoveCommonTx(hash common.Hash) {
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+
+}
+
+func (txp *TxPool) GenerateTxBloom() types.Bloom{
+	txp.Bloom  = types.TxsBloom(txp.QueuedTxs)
+	return txp.Bloom
+}
+
+
+func (txp *TxPool) Update() {
+	select {
+	case <- txp.QueuedEvent:
+		txp.GenerateQueuedTxs()
+		case commonBloom := <-txp.CommonBloomCh:
+			txp.FindCommonTxs(commonBloom)
+	}
+}
