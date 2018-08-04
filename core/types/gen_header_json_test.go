@@ -12,7 +12,7 @@ var json1 []byte
 func TestHeader_MarshalJSON(t *testing.T) {
 	var hash1 common.Hash
 	header := Header{
-		Version:3,
+		Version:big.NewInt(3),
 		ParentHash:hash1,
 		TxHash:hash1,
 		VotesRoot:hash1,

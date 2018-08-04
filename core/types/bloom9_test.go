@@ -19,6 +19,9 @@ package types
 import (
 	"math/big"
 	"testing"
+	"DataFlowBlockChain/crypto"
+	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func TestBloom(t *testing.T) {
@@ -79,3 +82,32 @@ func TestAddress(t *testing.T) {
 	fmt.Printf("bin = %x\n", common.LeftPadBytes(bin, 64))
 }
 */
+
+func TestBloomLookup(t *testing.T) {
+	data1 := []byte{1, 3, 5, 6}
+	data2 := []byte{6, 7, 8, 9}
+
+	hash1 := crypto.Keccak256Hash(data1)
+	hash2 := crypto.Keccak256Hash(data2)
+
+	hashes := make([]common.Hash, 0)
+	hashes =append(hashes, hash1, hash2)
+	bloom1 := NewBloom(hash1)
+	bloom2 := NewBloom(hash2)
+
+	bloom1.Add(bloom2.Big())
+	txs := map[common.Hash]*Transaction{
+		hash1: &Transaction{},
+		hash2: &Transaction{},
+	}
+	bloom := TxsBloom(txs)
+	fmt.Println(bloom1)
+	fmt.Println(bloom)
+
+	isIn := BloomLookup(bloom, hash1)
+	isIn1 := BloomLookup(bloom, hash2)
+
+	fmt.Println(isIn, "\n", isIn1)
+
+
+}

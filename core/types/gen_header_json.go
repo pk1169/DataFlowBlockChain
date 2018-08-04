@@ -22,9 +22,10 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		VotesRoot  common.Hash  `json:"votesRoot" gencodec:"required"`
 		Time       *hexutil.Big `json:"time" gencodec:"required"`
 		Number     *hexutil.Big `json:"number" gencodec:"required"`
-		V          *hexutil.Big `json:"v" gencodec:"required"`
-		R          *hexutil.Big `json:"r" gencodec:"required"`
-		S          *hexutil.Big `json:"s" gencodec:"required"`
+		V          *hexutil.Big `json:"v" 		gencodec:"required"`
+		R          *hexutil.Big `json:"r" 		gencodec:"required"`
+		S          *hexutil.Big `json:"s" 		gencodec:"required"`
+		PubKey     []byte       `json:"pubKey"	gencodec:"required"`
 		Hash       common.Hash  `json:"hash"`
 	}
 	var enc Header
@@ -37,6 +38,7 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.V = (*hexutil.Big)(h.V)
 	enc.R = (*hexutil.Big)(h.R)
 	enc.S = (*hexutil.Big)(h.S)
+	enc.PubKey = h.PubKey
 	enc.Hash = h.Hash()
 	return json.Marshal(&enc)
 }
@@ -50,9 +52,10 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		VotesRoot  *common.Hash `json:"votesRoot" gencodec:"required"`
 		Time       *hexutil.Big `json:"time" gencodec:"required"`
 		Number     *hexutil.Big `json:"number" gencodec:"required"`
-		V          *hexutil.Big `json:"v" gencodec:"required"`
-		R          *hexutil.Big `json:"r" gencodec:"required"`
-		S          *hexutil.Big `json:"s" gencodec:"required"`
+		V          *hexutil.Big `json:"v" 		gencodec:"required"`
+		R          *hexutil.Big `json:"r" 		gencodec:"required"`
+		S          *hexutil.Big `json:"s" 		gencodec:"required"`
+		PubKey     []byte       `json:"pubKey"	gencodec:"required"`
 	}
 	var dec Header
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -82,17 +85,17 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'number' for Header")
 	}
 	h.Number = (*big.Int)(dec.Number)
-	if dec.V == nil {
-		return errors.New("missing required field 'v' for Header")
+	if dec.V != nil {
+		h.V = (*big.Int)(dec.V)
 	}
-	h.V = (*big.Int)(dec.V)
-	if dec.R == nil {
-		return errors.New("missing required field 'r' for Header")
+	if dec.R != nil {
+		h.R = (*big.Int)(dec.R)
 	}
-	h.R = (*big.Int)(dec.R)
-	if dec.S == nil {
-		return errors.New("missing required field 's' for Header")
+	if dec.S != nil {
+		h.S = (*big.Int)(dec.S)
 	}
-	h.S = (*big.Int)(dec.S)
+	if dec.PubKey != nil {
+		h.PubKey = dec.PubKey
+	}
 	return nil
 }

@@ -14,9 +14,9 @@ type TxPool struct {
 	Bloom  		types.Bloom
 
 
-	CommonBloomCh  chan types.Bloom
+	CommonBloomCh  chan types.Bloom // inform txpool to find common txs
 	QueuedEvent	 chan struct{}  // inform the txpool to queue txs from pendingTxs
-	FindCommonEvent  chan struct{} // inform the txpool to find common txs
+	StartVoteEvent  chan struct{} // to sign txs in txpool prepared for voting
 }
 
 // func
@@ -65,6 +65,8 @@ func (txp *TxPool) FindCommonTxs(commonBloom types.Bloom) {
 	defer lock.Unlock()
 	for hash, tx := range txp.QueuedTxs {
 		isCommon := types.BloomLookup(commonBloom, hash)
+		//// @ mode
+		//fmt.Println(isCommon)
 		if isCommon {
 			txp.CommonTxs[hash] = tx
 		}

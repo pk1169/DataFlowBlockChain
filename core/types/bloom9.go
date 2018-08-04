@@ -59,7 +59,7 @@ func (b *Bloom) SetBytes(d []byte) {
 // Add adds d to the filter. Future calls of Test(d) will return true.
 func (b *Bloom) Add(d *big.Int) {
 	bin := new(big.Int).SetBytes(b[:])
-	bin.Or(bin, bloom9(d.Bytes()))
+	bin.Or(bin, d)
 	b.SetBytes(bin.Bytes())
 }
 
@@ -94,21 +94,33 @@ func (b *Bloom) UnmarshalText(input []byte) error {
 
 // func TxsBloom is to generate
 func TxsBloom(txs map[common.Hash]*Transaction) Bloom{
-	var bloom Bloom
-	for k, _ := range txs {
-		value := Bloom9(k[:])
-		bloom.Add(value)
+	bloom := new(Bloom)
+	for hash, _ := range txs {
+		//// @mode
+		//fmt.Println(hash)
+		value := NewBloom(hash)
+		bloom.Add(value.Big())
 	}
-	return bloom
+	return *bloom
 }
 
-func bloom9(b []byte) *big.Int {
+func NewBloom(hash common.Hash) Bloom {
+	r := bloom9(hash.Bytes()[:])
+
+	b := new(Bloom)
+	b.SetBytes(r.Bytes())
+	return *b
+}
+
+
+// 将一个
+func bloom9(bytes []byte) *big.Int {
 
 	r := new(big.Int)
 
 	for i := 0; i < 6; i += 2 {
 		t := big.NewInt(1)
-		b := (uint(b[i+1]) + (uint(b[i]) << 8)) & 2047 // 相当于mod 2048
+		b := (uint(bytes[i+1]) + (uint(bytes[i]) << 8)) & 2047 // 相当于mod 2048
 		r.Or(r, t.Lsh(t, b))
 	}
 
@@ -122,4 +134,14 @@ func BloomLookup(bin Bloom, topic bytesBacked) bool {
 	cmp := bloom9(topic.Bytes()[:])
 
 	return bloom.And(bloom, cmp).Cmp(cmp) == 0
+}
+
+func CommonBloom(blooms []Bloom) Bloom {
+	r := blooms[0].Big()
+	for i := 1; i < len(blooms); i++ {
+		r.And(r, blooms[i].Big())
+	}
+	b := new(Bloom)
+	b.SetBytes(r.Bytes())
+	return *b
 }
