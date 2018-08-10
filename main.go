@@ -38,6 +38,7 @@ func init() {
 		Version: big.NewInt(3),
 		Number: big.NewInt(0),
 		Time: big.NewInt(0),
+		ParentHash: common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		}
 	block := types.NewBlock(header, types.Transactions{&types.Transaction{}}, types.VoteCollection{&types.Vote{}})
 	fmt.Println(block.Hash())

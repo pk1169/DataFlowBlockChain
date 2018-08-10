@@ -16,7 +16,19 @@ type TxPool struct {
 
 	CommonBloomCh  chan types.Bloom // inform txpool to find common txs
 	QueuedEvent	 chan struct{}  // inform the txpool to queue txs from pendingTxs
-	StartVoteEvent  chan struct{} // to sign txs in txpool prepared for voting
+	StartVoteEvent  chan struct{} // to signal txs in txpool prepared for voting
+}
+
+func NewTxPool() *TxPool{
+	return &TxPool{
+		PendingTxs: make(map[common.Hash]*types.Transaction),
+		QueuedTxs:  make(map[common.Hash]*types.Transaction),
+		CommonTxs:  make(map[common.Hash]*types.Transaction),
+		VotedTxs:   make(map[common.Hash]*types.Transaction),
+		CommonBloomCh: make(chan types.Bloom, 1),
+		QueuedEvent:   make(chan struct{}, 1),
+		StartVoteEvent: make(chan struct{}, 1),
+	}
 }
 
 // func

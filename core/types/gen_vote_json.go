@@ -16,18 +16,18 @@ var _ = (*VoteMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (v Vote) MarshalJSON() ([]byte, error) {
 	type Vote struct {
-		TxHash  common.Hash  `json:"txHash"	gencodec:"required"`
-		IsExist *hexutil.Big `json:"isExist" gencodec:"required"`
-		NodeID  string       `json:"nodeID"	gencodec:"required"`
-		Func    common.Hash  `json:"func"	gencodec:"required"`
-		V       *hexutil.Big `json:"v" 		gencodec:"required"`
-		R       *hexutil.Big `json:"r"		gencodec:"required"`
-		S       *hexutil.Big `json:"s"		gencodec:"required"`
-		PubKey  []byte       `json:"pubKey"	gencodec:"required"`
-		Hash    common.Hash  `json:"hash"`
+		DataHash common.Hash  `json:"txHash"	gencodec:"required"`
+		IsExist  *hexutil.Big `json:"isExist" gencodec:"required"`
+		NodeID   string       `json:"nodeID"	gencodec:"required"`
+		Func     common.Hash  `json:"func"	gencodec:"required"`
+		V        *hexutil.Big `json:"v" 		gencodec:"required"`
+		R        *hexutil.Big `json:"r"		gencodec:"required"`
+		S        *hexutil.Big `json:"s"		gencodec:"required"`
+		PubKey   []byte       `json:"pubKey"	gencodec:"required"`
+		Hash     common.Hash  `json:"hash"`
 	}
 	var enc Vote
-	enc.TxHash = v.TxHash
+	enc.DataHash = v.DataHash
 	enc.IsExist = (*hexutil.Big)(v.IsExist)
 	enc.NodeID = v.NodeID
 	enc.Func = v.Func
@@ -42,21 +42,21 @@ func (v Vote) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (v *Vote) UnmarshalJSON(input []byte) error {
 	type Vote struct {
-		TxHash  *common.Hash `json:"txHash"	gencodec:"required"`
-		IsExist *hexutil.Big `json:"isExist" gencodec:"required"`
-		NodeID  *string      `json:"nodeID"	gencodec:"required"`
-		Func    *common.Hash `json:"func"	gencodec:"required"`
-		V       *hexutil.Big `json:"v" 		gencodec:"required"`
-		R       *hexutil.Big `json:"r"		gencodec:"required"`
-		S       *hexutil.Big `json:"s"		gencodec:"required"`
-		PubKey  []byte       `json:"pubKey"	gencodec:"required"`
+		DataHash *common.Hash `json:"txHash"	gencodec:"required"`
+		IsExist  *hexutil.Big `json:"isExist" gencodec:"required"`
+		NodeID   *string      `json:"nodeID"	gencodec:"required"`
+		Func     *common.Hash `json:"func"	gencodec:"required"`
+		V        *hexutil.Big `json:"v" 		gencodec:"required"`
+		R        *hexutil.Big `json:"r"		gencodec:"required"`
+		S        *hexutil.Big `json:"s"		gencodec:"required"`
+		PubKey   []byte       `json:"pubKey"	gencodec:"required"`
 	}
 	var dec Vote
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
-	if dec.TxHash != nil {
-		v.TxHash = *dec.TxHash
+	if dec.DataHash != nil {
+		v.DataHash = *dec.DataHash
 	}
 	if dec.IsExist == nil {
 		return errors.New("missing required field 'isExist' for Vote")

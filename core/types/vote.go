@@ -14,8 +14,9 @@ import (
 
 type Vote struct {
 	// 在上块的时候
-	TxHash 		common.Hash `json:"txHash"	gencodec:"required"`
+	DataHash 		common.Hash `json:"txHash"	gencodec:"required"`
 
+	// following three attributes are for TxVote
 	IsExist		*big.Int	`json:"isExist" gencodec:"required"`
 	NodeID		string		`json:"nodeID"	gencodec:"required"`
 	Func		common.Hash	`json:"func"	gencodec:"required"`
@@ -37,7 +38,7 @@ type VoteMarshaling struct {
 
 func NewVote(txHash common.Hash, isExist *big.Int, nodeID string, funcHash common.Hash, pubKey []byte) *Vote {
 	return &Vote{
-		TxHash: txHash,
+		DataHash: txHash,
 		IsExist: isExist,
 		NodeID: nodeID,
 		Func: funcHash,
@@ -73,7 +74,7 @@ func (vote *Vote) Sign(privKey *ecdsa.PrivateKey) (*Vote, error) {
 
 func CopyVote(vote *Vote) (*Vote) {
 	cpy := &Vote{
-		TxHash: vote.TxHash,
+		DataHash: vote.DataHash,
 		IsExist: vote.IsExist,
 		NodeID: vote.NodeID,
 		Func: vote.Func,
@@ -89,7 +90,7 @@ func (v *Vote) Hash() common.Hash {
 // HashNoNonce returns the hash which is used as input for the proof-of-work search.
 func (v *Vote) HashNoSig() common.Hash {
 	return rlpHash([]interface{}{
-		v.TxHash,
+		v.DataHash,
 		v.IsExist,
 		v.NodeID,
 		v.Func,

@@ -18,6 +18,7 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 		V           *hexutil.Big `json:"v"	gencodec:"required"`
 		R           *hexutil.Big `json:"r"	gencodec:"required"`
 		S           *hexutil.Big `json:"s"	gencodec:"required"`
+		Abnormal    uint64       `json:"abnormal gencodec:"required"`
 		SrcAddress  string       `json:"srcAddress"	gencodec:"required"`
 		DestAddress string       `json:"destAddress"	gencodec:"required"`
 		SrcPort     *big.Int     `json:"srcPort" 	gencodec:"required"`
@@ -33,6 +34,7 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 	enc.V = (*hexutil.Big)(t.V)
 	enc.R = (*hexutil.Big)(t.R)
 	enc.S = (*hexutil.Big)(t.S)
+	enc.Abnormal = t.Abnormal
 	enc.SrcAddress = t.SrcAddress
 	enc.DestAddress = t.DestAddress
 	enc.SrcPort = t.SrcPort
@@ -52,6 +54,7 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		V           *hexutil.Big `json:"v"	gencodec:"required"`
 		R           *hexutil.Big `json:"r"	gencodec:"required"`
 		S           *hexutil.Big `json:"s"	gencodec:"required"`
+		Abnormal    *uint64      `json:"abnormal gencodec:"required"`
 		SrcAddress  *string      `json:"srcAddress"	gencodec:"required"`
 		DestAddress *string      `json:"destAddress"	gencodec:"required"`
 		SrcPort     *big.Int     `json:"srcPort" 	gencodec:"required"`
@@ -75,6 +78,9 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 	}
 	if dec.S != nil {
 		t.S = (*big.Int)(dec.S)
+	}
+	if dec.Abnormal != nil {
+		t.Abnormal = *dec.Abnormal
 	}
 	if dec.SrcAddress != nil {
 		t.SrcAddress = *dec.SrcAddress
