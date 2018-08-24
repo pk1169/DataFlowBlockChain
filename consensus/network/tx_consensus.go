@@ -1,4 +1,4 @@
-package consensus
+package network
 
 import (
 	"DataFlowBlockChain/core/types"
@@ -38,14 +38,19 @@ type TxConsensus struct {
 	State  *State
 	tv *TxVoteValidator
 }
-func NewTxConsensus(state *State) *TxConsensus {
+func NewTxConsensus(view *View) *TxConsensus {
 	return &TxConsensus{
-		State: state,
+		State: NewState(view.ID),
 		tv:    NewTxVoteValidator(),
 	}
 }
 
-type CheckFunc func(txvote *types.Vote) bool
+func (txc *TxConsensus) Refresh() {
+	viewID := txc.State.ViewID
+	txc.State = NewState(viewID)
+}
+
+type CheckFunc func(txvote *types.Vote) uint64
 
 type TxVoteValidator struct {
 	funcMap map[common.Hash] CheckFunc
@@ -70,18 +75,18 @@ func NewTxVoteValidator() *TxVoteValidator{
 	return tv
 }
 
-func Check1(txvote *types.Vote) bool {
+func Check1(txvote *types.Vote) uint64 {
 
-	return true
+	return 1
 }
 
-func Check2(txvote *types.Vote) bool {
+func Check2(txvote *types.Vote) uint64 {
 
-	return true
+	return 1
 }
 
-func Check3(txvote *types.Vote) bool {
+func Check3(txvote *types.Vote) uint64 {
 
-	return true
+	return 1
 }
 

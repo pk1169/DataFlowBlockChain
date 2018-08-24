@@ -7,7 +7,7 @@ import (
 	"crypto/ecdsa"
 	"DataFlowBlockChain/crypto"
 	"log"
-	"go-ethereum1/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 //go:generate gencodec -type Vote -field-override VoteMarshaling -out gen_vote_json.go
@@ -17,7 +17,9 @@ type Vote struct {
 	DataHash 		common.Hash `json:"txHash"	gencodec:"required"`
 
 	// following three attributes are for TxVote
-	IsExist		*big.Int	`json:"isExist" gencodec:"required"`
+	IsExist		uint64	`json:"isExist" gencodec:"required"`
+	IsInnocent  uint64  `json:"isInnocent" gencodec:"required"`
+
 	NodeID		string		`json:"nodeID"	gencodec:"required"`
 	Func		common.Hash	`json:"func"	gencodec:"required"`
 
@@ -28,7 +30,6 @@ type Vote struct {
 }
 
 type VoteMarshaling struct {
-	IsExist 	*hexutil.Big
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
@@ -36,12 +37,10 @@ type VoteMarshaling struct {
 }
 
 
-func NewVote(txHash common.Hash, isExist *big.Int, nodeID string, funcHash common.Hash, pubKey []byte) *Vote {
+func NewVote(dataHash common.Hash,  nodeID string, pubKey []byte) *Vote {
 	return &Vote{
-		DataHash: txHash,
-		IsExist: isExist,
+		DataHash: dataHash,
 		NodeID: nodeID,
-		Func: funcHash,
 		PubKey: pubKey,
 	}
 }
@@ -97,3 +96,14 @@ func (v *Vote) HashNoSig() common.Hash {
 	})
 }
 
+func (v *Vote) VerifySig() bool {
+	sig := make([]byte, 64)
+	r, s := v.R.Bytes(), v.S.Bytes()
+	copy(sig[32-len(r):32], r)
+	copy(sig[64-len(s):64], s)
+
+	hash := v.HashNoSig()
+	isCorrect := crypto.VerifySignature(v.PubKey[:], hash[:], sig[:])
+
+	return isCorrect
+}

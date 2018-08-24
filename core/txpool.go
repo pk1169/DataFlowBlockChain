@@ -7,104 +7,84 @@ import (
 )
 
 type TxPool struct {
-	PendingTxs	map[common.Hash]*types.Transaction // txs received from network
-	QueuedTxs	map[common.Hash]*types.Transaction // txs used to generate bloom
-	CommonTxs 	map[common.Hash]*types.Transaction // txs filtered by bloom
+	PendingTxs  chan *types.Transaction//
 	VotedTxs	map[common.Hash]*types.Transaction // txs voted by nodes
-	Bloom  		types.Bloom
-
-
-	CommonBloomCh  chan types.Bloom // inform txpool to find common txs
-	QueuedEvent	 chan struct{}  // inform the txpool to queue txs from pendingTxs
-	StartVoteEvent  chan struct{} // to signal txs in txpool prepared for voting
+	Votes       map[common.Hash](map[string]*types.Vote) // the votes of votedTxs
 }
 
 func NewTxPool() *TxPool{
 	return &TxPool{
-		PendingTxs: make(map[common.Hash]*types.Transaction),
-		QueuedTxs:  make(map[common.Hash]*types.Transaction),
-		CommonTxs:  make(map[common.Hash]*types.Transaction),
+		PendingTxs: make(chan *types.Transaction, 10000),
 		VotedTxs:   make(map[common.Hash]*types.Transaction),
-		CommonBloomCh: make(chan types.Bloom, 1),
-		QueuedEvent:   make(chan struct{}, 1),
-		StartVoteEvent: make(chan struct{}, 1),
+		Votes:      make(map[common.Hash](map[string]*types.Vote)),
 	}
 }
 
+
 // func
-func (txp *TxPool) AddPendingTx(transaction *types.Transaction) {
-	var lock sync.RWMutex
-	lock.Lock()
-	defer lock.Unlock()
-	txp.PendingTxs[transaction.Hash()] = transaction
+func (txp *TxPool) AddPendingTx(tx *types.Transaction) {
+	txp.PendingTxs <- tx
 }
 
-func (txp *TxPool) RemovePendingTx(txHash common.Hash) {
+
+//
+func (txp *TxPool) PopPendingTx() *types.Transaction {
+	tx := <- txp.PendingTxs
+	return tx
+}
+
+// func AddVotedTx is to add voted tx to txp
+func (txp *TxPool) AddVotedTx(tx *types.Transaction) {
 	var lock sync.RWMutex
 	lock.Lock()
 	defer lock.Unlock()
-	delete(txp.PendingTxs, txHash)
+
+	txp.VotedTxs[tx.Hash()] = tx
+}
+
+func (txp *TxPool) ReadVotedTx(hash common.Hash) *types.Transaction {
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+
+	return txp.VotedTxs[hash]
 }
 
 //
-func (txp *TxPool) GenerateQueuedTxs() {
+func (txp *TxPool) PopVotedTxs() (txlist []*types.Transaction){
 	var lock sync.RWMutex
 	lock.Lock()
 	defer lock.Unlock()
-	for k, v := range txp.PendingTxs {
-		txp.QueuedTxs[k] = v
+	txlist = make([]*types.Transaction, 0)
+	for _, tx := range txp.VotedTxs{
+		txlist = append(txlist, tx)
 	}
-	txp.PendingTxs = make(map[common.Hash] *types.Transaction)
+	txp.VotedTxs = make(map[common.Hash]*types.Transaction)
+	return
 }
 
-func (txp *TxPool) AddingQueuedTx(hash common.Hash, transaction *types.Transaction) {
+func (txp *TxPool) AddTxVote(vote *types.Vote) {
 	var lock sync.RWMutex
 	lock.Lock()
 	defer lock.Unlock()
-	txp.QueuedTxs[hash] = transaction
+	txp.Votes[vote.DataHash][vote.NodeID] = vote
 }
 
-func (txp *TxPool) RemoveQueuedTx(hash common.Hash) {
+func (txp *TxPool) PopVote(hash common.Hash)  []*types.Vote {
 	var lock sync.RWMutex
 	lock.Lock()
 	defer lock.Unlock()
-	delete(txp.QueuedTxs, hash)
-}
-
-func (txp *TxPool) FindCommonTxs(commonBloom types.Bloom) {
-	var lock sync.RWMutex
-	lock.Lock()
-	defer lock.Unlock()
-	for hash, tx := range txp.QueuedTxs {
-		isCommon := types.BloomLookup(commonBloom, hash)
-		//// @ mode
-		//fmt.Println(isCommon)
-		if isCommon {
-			txp.CommonTxs[hash] = tx
-		}
+	voteList := make([]*types.Vote, 0)
+	for _, vote := range txp.Votes[hash] {
+		voteList = append(voteList, vote)
 	}
+	txp.Votes = make(map[common.Hash](map[string]*types.Vote))
+	return voteList
 }
 
 
 
-func (txp *TxPool) RemoveCommonTx(hash common.Hash) {
-	var lock sync.RWMutex
-	lock.Lock()
-	defer lock.Unlock()
-
-}
-
-func (txp *TxPool) GenerateTxBloom() types.Bloom{
-	txp.Bloom  = types.TxsBloom(txp.QueuedTxs)
-	return txp.Bloom
-}
 
 
-func (txp *TxPool) Update() {
-	select {
-	case <- txp.QueuedEvent:
-		txp.GenerateQueuedTxs()
-		case commonBloom := <-txp.CommonBloomCh:
-			txp.FindCommonTxs(commonBloom)
-	}
-}
+
+

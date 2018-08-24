@@ -91,7 +91,7 @@ func WriteVtLookupEntries(db DatabaseWriter, block *types.Block) {
 		}
 		// @mode
 		//fmt.Println(vtLookupKey(vt.TxHash, vt.NodeID))
-		if err := db.Put(vtLookupKey(vt.TxHash, vt.NodeID), data); err != nil {
+		if err := db.Put(vtLookupKey(vt.DataHash, vt.NodeID), data); err != nil {
 			log.Fatal("Failed to store vt lookup entry", "err", err)
 		}
 	}

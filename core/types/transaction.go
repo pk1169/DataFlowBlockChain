@@ -232,4 +232,19 @@ func (s Transactions) GetRlp(i int) []byte {
 	return enc
 }
 
+func (tx *Transaction) VerifySig() bool{
+	sig := make([]byte, 64)
+	r, s := tx.data.R.Bytes(), tx.data.S.Bytes()
+	copy(sig[32-len(r):32], r)
+	copy(sig[64-len(s):64], s)
+
+	hash := tx.HashNoSig()
+	isCorrect := crypto.VerifySignature(tx.data.PubKey, hash[:], sig[:])
+
+	return isCorrect
+}
+
+func (tx *Transaction) SetResult(r uint64) {
+	tx.data.Abnormal = r
+}
 

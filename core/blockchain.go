@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"DataFlowBlockChain/rlp"
-	"math/big"
 )
 
 const (
@@ -21,6 +20,7 @@ const (
 	blockCacheLimit     = 256
 
 )
+
 
 type BlockChain struct {
 	db 				ethdb.Database
@@ -38,6 +38,8 @@ type BlockChain struct {
 	bodyRLPCache *lru.Cache     // Cache for the most recent block bodies in RLP encoded format
 	blockCache   *lru.Cache     // Cache for the most recent entire blocks
 }
+
+
 
 func NewBlockChain(db ethdb.Database) (*BlockChain, error) {
 
@@ -61,14 +63,14 @@ func NewBlockChain(db ethdb.Database) (*BlockChain, error) {
 	}
 	bc.genesisBlock = bc.GetBlockByNumber(0)
 	if bc.genesisBlock == nil {
-		header := &types.Header{
-			Version: big.NewInt(3),
-			Number: big.NewInt(0),
-			Time: big.NewInt(0),
-			ParentHash: common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
-		}
-		block := types.NewBlock(header, types.Transactions{&types.Transaction{}}, types.VoteCollection{&types.Vote{}})
-		bc.ResetWithGenesisBlock(block)
+		//header := &types.Header{
+		//	Version: big.NewInt(3),
+		//	Number: big.NewInt(0),
+		//	Time: big.NewInt(0),
+		//	ParentHash: common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
+		//}
+		//block := types.NewBlock(header, types.Transactions{&types.Transaction{}}, types.VoteCollection{&types.Vote{}})
+		//bc.ResetWithGenesisBlock(block)
 		return bc, errors.New("no genesis block")
 	}
 
