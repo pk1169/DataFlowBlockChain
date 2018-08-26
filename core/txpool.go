@@ -8,6 +8,9 @@ import (
 
 type TxPool struct {
 	PendingTxs  chan *types.Transaction//
+	// Txlog is log if tx exist in txpool
+	TxLog       map[common.Hash]struct{}
+	// votedTxs store txs voted by consensus engine
 	VotedTxs	map[common.Hash]*types.Transaction // txs voted by nodes
 	Votes       map[common.Hash](map[string]*types.Vote) // the votes of votedTxs
 }
@@ -17,13 +20,29 @@ func NewTxPool() *TxPool{
 		PendingTxs: make(chan *types.Transaction, 10000),
 		VotedTxs:   make(map[common.Hash]*types.Transaction),
 		Votes:      make(map[common.Hash](map[string]*types.Vote)),
+
+		TxLog:      make(map[common.Hash]struct{}),
 	}
 }
 
+func (txp *TxPool) LogTx(hash common.Hash) {
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+	txp.TxLog[hash] = struct{}{}
+}
+
+func (txp *TxPool) UnLogTx(hash common.Hash) {
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+	delete(txp.TxLog, hash)
+}
 
 // func
 func (txp *TxPool) AddPendingTx(tx *types.Transaction) {
 	txp.PendingTxs <- tx
+	txp.LogTx(tx.Hash())
 }
 
 
@@ -58,7 +77,10 @@ func (txp *TxPool) PopVotedTxs() (txlist []*types.Transaction){
 	txlist = make([]*types.Transaction, 0)
 	for _, tx := range txp.VotedTxs{
 		txlist = append(txlist, tx)
+		txp.UnLogTx(tx.Hash())
 	}
+
+	// refresh the store space of votedTxs
 	txp.VotedTxs = make(map[common.Hash]*types.Transaction)
 	return
 }

@@ -50,10 +50,11 @@ func (txc *TxConsensus) Refresh() {
 	txc.State = NewState(viewID)
 }
 
-type CheckFunc func(txvote *types.Vote) uint64
+type CheckFunc func(txvote *types.Transaction) uint64
 
 type TxVoteValidator struct {
 	funcMap map[common.Hash] CheckFunc
+	funcs []string
 }
 
 func NewTxVoteValidator() *TxVoteValidator{
@@ -75,17 +76,17 @@ func NewTxVoteValidator() *TxVoteValidator{
 	return tv
 }
 
-func Check1(txvote *types.Vote) uint64 {
+func Check1(tx *types.Transaction) uint64 {
 
 	return 1
 }
 
-func Check2(txvote *types.Vote) uint64 {
+func Check2(txvote *types.Transaction) uint64 {
 
 	return 1
 }
 
-func Check3(txvote *types.Vote) uint64 {
+func Check3(txvote *types.Transaction) uint64 {
 
 	return 1
 }

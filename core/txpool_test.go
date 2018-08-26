@@ -2,7 +2,6 @@ package core
 
 import (
 	"testing"
-	"github.com/ethereum/go-ethereum/common"
 	"DataFlowBlockChain/core/types"
 	"math/big"
 	"log"
@@ -22,48 +21,56 @@ var (
 )
 
 
-func TestTxPool_FindCommonTxs(t *testing.T) {
-	var txs1 = make(map[common.Hash]*types.Transaction)
-	var txs2 = make(map[common.Hash]*types.Transaction)
-	txs := make(types.Transactions, 10000)
+
+
+func TestTxPool_AddPendingTx(t *testing.T) {
+	txp := NewTxPool()
 	key, err := accounts.GetKey("../accounts/keyfile")
 	if err != nil {
 		log.Fatal("new key error ", "key error", err)
 	}
 
-	for i := 0; i < len(txs); i++ {
+	for i := 0; i < 10; i++ {
 		tx := types.NewTransaction(srcAddress, destAddress, srcPort, destPort, protocol, startTime, lastTime, size, key.PubKey[:])
-		txs[i], err = tx.Sign(key.PrivateKey)
-
-		txs1[txs[i].Hash()] = txs[i]
-
+		tx, err = tx.Sign(key.PrivateKey)
 		if err != nil {
 			log.Fatal("sign error", "error ", err)
 		}
+		txp.AddPendingTx(tx)
 		size.Add(size, big.NewInt(1))
 	}
 
-	for i := 0; i < len(txs)-6000; i++ {
-
-		txs2[txs[i].Hash()] = txs[i]
+	close(txp.PendingTxs)
+	for pendingTx := range txp.PendingTxs {
+		fmt.Println(pendingTx)
+		if _, ok := txp.TxLog[pendingTx.Hash()]; ok {
+			fmt.Println("tx is exist")
+		}
 	}
-
-
-	txpool := new(TxPool)
-	bloom1 := types.TxsBloom(txs1)
-	bloom2 := types.TxsBloom(txs2)
-	var blooms = make([]types.Bloom, 0)
-	blooms = append(blooms, bloom1, bloom2)
-
-	commonBloom := types.CommonBloom(blooms)
-	fmt.Println("common bl: ", commonBloom)
-	txpool.QueuedTxs = txs1
-	txpool.CommonTxs = make(map[common.Hash] *types.Transaction)
-	txpool.FindCommonTxs(commonBloom)
-	fmt.Println(len(txpool.QueuedTxs))
-	fmt.Println(len(txpool.CommonTxs))
 
 }
 
+func TestTxPool_AddVotedTx(t *testing.T) {
+	txp := NewTxPool()
+	key, err := accounts.GetKey("../accounts/keyfile")
+	if err != nil {
+		log.Fatal("new key error ", "key error", err)
+	}
 
+	for i := 0; i < 10; i++ {
+		tx := types.NewTransaction(srcAddress, destAddress, srcPort, destPort, protocol, startTime, lastTime, size, key.PubKey[:])
+		tx, err = tx.Sign(key.PrivateKey)
+		if err != nil {
+			log.Fatal("sign error", "error ", err)
+		}
+		txp.AddPendingTx(tx)
+		size.Add(size, big.NewInt(1))
+	}
+
+	close(txp.PendingTxs)
+	for pendingTx := range txp.PendingTxs {
+		fmt.Println(pendingTx)
+	}
+
+}
 

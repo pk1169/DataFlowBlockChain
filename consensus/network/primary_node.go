@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"github.com/Unknwon/goconfig"
 	"log"
-	"crypto/rand"
 	"DataFlowBlockChain/ethdb"
 	"DataFlowBlockChain/core/rawdb"
 	"DataFlowBlockChain/core/types"
@@ -15,6 +14,8 @@ import (
 	"DataFlowBlockChain/rlp"
 	"time"
 	"io/ioutil"
+	"crypto/rand"
+	"DataFlowBlockChain/crypto"
 )
 
 type PrimaryNode struct {
@@ -174,22 +175,32 @@ func (node *PrimaryNode) handleMsg(msg *Msg) {
 		case PrePrepareMsg:
 			var tx = new(types.Transaction)
 			rlp.DecodeBytes(msg.Payload, tx)
+
 			if tx.VerifySig() {
 				node.tc.State.MsgLogs.VoteData = tx
 			}
 		case PrepareMsg:
 			var vote = new(types.Vote)
 			rlp.DecodeBytes(msg.Payload, vote)
+			checkFunc := node.tc.tv.funcMap[vote.Func]
 			tx := node.tc.State.MsgLogs.VoteData.(*types.Transaction)
-			if vote.VerifySig() && tx.Hash() == vote.DataHash {
-				node.tc.State.MsgLogs.PrepareMsgs[vote.NodeID] = vote
+
+			if checkFunc(tx) == vote.IsInnocent {
+				if vote.VerifySig() && tx.Hash() == vote.DataHash {
+					node.tc.State.MsgLogs.PrepareMsgs[vote.NodeID] = vote
+				}
 			}
+
 		case CommitMsg:
 			var vote = new(types.Vote)
 			rlp.DecodeBytes(msg.Payload, vote)
+			checkFunc := node.tc.tv.funcMap[vote.Func]
 			tx := node.tc.State.MsgLogs.VoteData.(*types.Transaction)
-			if vote.VerifySig() && tx.Hash() == vote.DataHash {
-				node.tc.State.MsgLogs.CommitMsgs[vote.NodeID] = vote
+
+			if checkFunc(tx) == vote.IsInnocent {
+				if vote.VerifySig() && tx.Hash() == vote.DataHash {
+					node.tc.State.MsgLogs.CommitMsgs[vote.NodeID] = vote
+				}
 			}
 		}
 
@@ -249,7 +260,7 @@ func (node *PrimaryNode) Update() {
 
 func (node *PrimaryNode) Check() {
 	for {
-
+		// if tx number > 1000
 		if len(node.TxPool.VotedTxs) >= 1000 {
 			go node.GenerateBlock()
 		}
@@ -265,37 +276,37 @@ func (node *PrimaryNode) BlockConsensus(block *types.Block) {
 
 	go node.bkc.State.CheckStage()
 
+	// new vote
+	vote := &types.Vote{
+		DataHash: block.Hash(),
+		NodeID:   node.NodeID,
+		PubKey:   node.Key.PubKey[:],
+	}
+	vote1, err := vote.Sign(node.Key.PrivateKey)
+
+	if err != nil {
+		log.Fatal("vote sig error", " error ", err)
+	}
+
 	for node.bkc.State.CurrentStage != Committed {
 		if node.bkc.State.CurrentStage == Idle {
 			msg := NewMsg(node.View.ID, VoteBlock, PrePrepareMsg, block)
 			node.BroadCast(msg)
 		}
-
+        // if PrePrepared, send prepare msg
 		if node.bkc.State.CurrentStage == PrePrepared {
-			vote := &types.Vote{
-				DataHash: block.Hash(),
-				NodeID:   node.NodeID,
-				PubKey:   node.Key.PubKey[:],
-			}
-			vote1, err := vote.Sign(node.Key.PrivateKey)
-			if err != nil {
-				log.Fatal("vote sig error", " error ", err)
-			}
+
+			// log self's vote
+			node.bkc.State.MsgLogs.CommitMsgs[vote1.NodeID] = vote1
 			msg := NewMsg(node.View.ID, VoteBlock, PrepareMsg, vote1)
 			node.BroadCast(msg)
 		}
 
-
+		// if Prepared, send commit msg
 		if node.bkc.State.CurrentStage == Prepared {
-			vote := &types.Vote{
-				DataHash: block.Hash(),
-				NodeID:   node.NodeID,
-				PubKey:   node.Key.PubKey[:],
-			}
-			vote1, err := vote.Sign(node.Key.PrivateKey)
-			if err != nil {
-				log.Fatal("vote sig error", " error ", err)
-			}
+			// log self's msg
+			node.bkc.State.MsgLogs.CommitMsgs[vote1.NodeID] = vote1
+
 			msg := NewMsg(node.View.ID, VoteBlock, CommitMsg, vote1)
 			node.BroadCast(msg)
 		}
@@ -331,23 +342,49 @@ func (node *PrimaryNode) Listen() {
 func (node *PrimaryNode) TxConsensus(tx *types.Transaction) {
 
 	go node.tc.State.CheckStage()
-	for node.bkc.State.CurrentStage != Committed {
-		if node.bkc.State.CurrentStage == Idle {
+	c := time.Now().Unix()
+	name := node.tc.tv.funcs[c%3]
+	checkFunc := node.tc.tv.funcMap[crypto.Keccak256Hash([]byte(name))]
+	r := checkFunc(tx)
+
+	vote := &types.Vote{
+		DataHash: tx.Hash(),
+		IsExist: 1,
+		IsInnocent:r,
+		NodeID:node.NodeID,
+		PubKey: node.Key.PubKey[:],
+	}
+
+	vote1, err := vote.Sign(node.Key.PrivateKey)
+	if err != nil {
+		log.Fatal("sig vote err", " error ", err)
+	}
+
+	for node.tc.State.CurrentStage != Committed {
+		if node.tc.State.CurrentStage == Idle {
 			msg := NewMsg(node.View.ID, VoteTx, PrePrepareMsg, tx)
 			node.BroadCast(msg)
 		}
 
-		if node.bkc.State.CurrentStage == PrePrepared {
-			msg := NewMsg(node.View.ID, VoteTx, PrepareMsg, tx)
+		if node.tc.State.CurrentStage == PrePrepared {
+			// log self's msg
+			node.tc.State.MsgLogs.PrepareMsgs[node.NodeID] = vote1
+
+			msg := NewMsg(node.View.ID, VoteTx, PrepareMsg, vote1)
 			node.BroadCast(msg)
 		}
 
 
-		if node.bkc.State.CurrentStage == Prepared {
+		if node.tc.State.CurrentStage == Prepared {
+			// log self's msg
+			node.tc.State.MsgLogs.PrepareMsgs[node.NodeID] = vote1
+
 			msg := NewMsg(node.View.ID, VoteTx, CommitMsg, tx)
 			node.BroadCast(msg)
 		}
 	}
+
+	// collect votes of tx
 	countVote1 := make([]*types.Vote, 0)
 	for _, vote := range node.tc.State.MsgLogs.CommitMsgs {
 		if vote.IsExist == 1 {
@@ -355,7 +392,7 @@ func (node *PrimaryNode) TxConsensus(tx *types.Transaction) {
 		}
 	}
 
-	if len(countVote1) >= 2*f {
+	if len(countVote1) > 2*f {
 		count := make(map[uint64]int)
 		for _, vote := range countVote1 {
 			count[vote.IsInnocent]++

@@ -75,13 +75,14 @@ func (state *State) CheckStage() {
 			state.CurrentStage = PrePrepared
 		}
 
-		if len(state.MsgLogs.PrepareMsgs) >= 2*f {
+		if len(state.MsgLogs.PrepareMsgs) > 2*f {
 			state.CurrentStage = PrePrepared
 		}
 
-		if len(state.MsgLogs.CommitMsgs) >= 2*f {
+		if len(state.MsgLogs.CommitMsgs) > 2*f {
 			state.CurrentStage = Committed
 			break
 		}
 	}
 }
+
