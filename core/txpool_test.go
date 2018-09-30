@@ -57,19 +57,43 @@ func TestTxPool_AddVotedTx(t *testing.T) {
 		log.Fatal("new key error ", "key error", err)
 	}
 
+	nodes := []string{"Apple", "IBM", "Google"}
 	for i := 0; i < 10; i++ {
 		tx := types.NewTransaction(srcAddress, destAddress, srcPort, destPort, protocol, startTime, lastTime, size, key.PubKey[:])
 		tx, err = tx.Sign(key.PrivateKey)
 		if err != nil {
 			log.Fatal("sign error", "error ", err)
 		}
-		txp.AddPendingTx(tx)
-		size.Add(size, big.NewInt(1))
+		txp.AddVotedTx(tx)
+		for i := 0; i < len(nodes); i++ {
+			vote := types.NewVote(tx.Hash(), nodes[i], key.PubKey[:])
+			txp.AddTxVote(vote)
+		}
+		size.Add(size, big.NewInt(7))
 	}
 
-	close(txp.PendingTxs)
-	for pendingTx := range txp.PendingTxs {
-		fmt.Println(pendingTx)
+	fmt.Println(txp.VotedTxs)
+
+	for txHash, VoteMap := range txp.Votes {
+		fmt.Println(txHash)
+		for node, vote := range VoteMap {
+			fmt.Println(node)
+			fmt.Println(vote)
+		}
+	}
+
+	votedTxs := txp.PopVotedTxs()
+
+	votes := make([]*types.Vote, 0)
+
+	for _, tx := range votedTxs {
+		txVote := txp.PopVote(tx.Hash())
+		votes = append(votes, txVote...)
+	}
+
+	txp.RefreshVotes()
+	for _, vote := range votes {
+		fmt.Println(vote)
 	}
 
 }

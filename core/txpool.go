@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"DataFlowBlockChain/core/types"
 	"sync"
+	"fmt"
 )
 
 type TxPool struct {
@@ -70,11 +71,11 @@ func (txp *TxPool) ReadVotedTx(hash common.Hash) *types.Transaction {
 }
 
 //
-func (txp *TxPool) PopVotedTxs() (txlist []*types.Transaction){
+func (txp *TxPool) PopVotedTxs() ([]*types.Transaction){
 	var lock sync.RWMutex
 	lock.Lock()
 	defer lock.Unlock()
-	txlist = make([]*types.Transaction, 0)
+	txlist := make([]*types.Transaction, 0)
 	for _, tx := range txp.VotedTxs{
 		txlist = append(txlist, tx)
 		txp.UnLogTx(tx.Hash())
@@ -82,14 +83,24 @@ func (txp *TxPool) PopVotedTxs() (txlist []*types.Transaction){
 
 	// refresh the store space of votedTxs
 	txp.VotedTxs = make(map[common.Hash]*types.Transaction)
-	return
+	return txlist
 }
 
 func (txp *TxPool) AddTxVote(vote *types.Vote) {
 	var lock sync.RWMutex
 	lock.Lock()
 	defer lock.Unlock()
-	txp.Votes[vote.DataHash][vote.NodeID] = vote
+
+	if txp.Votes[vote.DataHash] == nil {
+		txp.Votes[vote.DataHash] = make(map[string]*types.Vote)
+		txp.Votes[vote.DataHash][vote.NodeID] = vote
+
+	} else {
+		txp.Votes[vote.DataHash][vote.NodeID] = vote
+	}
+
+	// @mode
+	fmt.Println(txp.Votes[vote.DataHash][vote.NodeID])
 }
 
 func (txp *TxPool) PopVote(hash common.Hash)  []*types.Vote {
@@ -97,13 +108,19 @@ func (txp *TxPool) PopVote(hash common.Hash)  []*types.Vote {
 	lock.Lock()
 	defer lock.Unlock()
 	voteList := make([]*types.Vote, 0)
-	for _, vote := range txp.Votes[hash] {
+	voteMap := txp.Votes[hash]
+	for _, vote := range voteMap {
 		voteList = append(voteList, vote)
 	}
-	txp.Votes = make(map[common.Hash](map[string]*types.Vote))
 	return voteList
 }
 
+func (txp *TxPool) RefreshVotes() {
+	var lock sync.RWMutex
+	lock.Lock()
+	defer lock.Unlock()
+	txp.Votes = make(map[common.Hash](map[string]*types.Vote))
+}
 
 
 

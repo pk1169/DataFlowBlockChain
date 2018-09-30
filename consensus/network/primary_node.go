@@ -451,6 +451,8 @@ func (node *PrimaryNode) GenerateBlock()  {
 		votes = append(votes, votelist...)
 	}
 
+	node.TxPool.RefreshVotes()
+
 	block := types.NewBlock(header, txs, votes)
 
 	node.newBlock <- block
